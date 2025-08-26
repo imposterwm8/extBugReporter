@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "Bug Reporter",
+  "version": "1.9",
+  "background": {
+    "service_worker": "background.js"
+  },
+  "description": "Reports bugs by copying browser info to the clipboard.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "clipboardWrite"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "images/icon16.png",
+      "48": "images/icon48.png",
+      "128": "images/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "images/icon16.png",
+    "48": "images/icon48.png",
+    "128": "images/icon128.png"
+  }
+}
