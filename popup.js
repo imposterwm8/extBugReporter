@@ -27,6 +27,14 @@ chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
   }
 });
 
+// Set up message listener at module level (before any script execution)
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.type === 'bugReportData') {
+    displayBugReport(request.report);
+    sendResponse({ received: true });
+  }
+});
+
 // Generate bug report and display in popup
 async function generateBugReport() {
   const reportContainer = document.getElementById('reportContainer');
@@ -35,13 +43,13 @@ async function generateBugReport() {
   
   try {
     // Show loading state
-    bugReportText.value = 'Scraping together bug report... click Refresh if nothing appears';
+    bugReportText.value = 'Analyzing page for bug report...';
     reportContainer.classList.remove('hidden');
     document.body.classList.add('expanded');
     startButton.style.display = 'none';
     
     // Execute AI-enhanced content script to collect data
-    bugReportText.value = 'Loading AI model for smart analysis... This may take a moment on first use.';
+    bugReportText.value = 'Loading AI model for smart analysis... This may take a moment.';
     
     const results = await chrome.scripting.executeScript({
       target: { tabId: currentTab.id },
@@ -51,17 +59,26 @@ async function generateBugReport() {
     // Update loading message after script execution
     setTimeout(() => {
       if (bugReportText.value.includes('Loading AI model')) {
-        bugReportText.value = 'AI model loaded! Analyzing page content... click Refresh if nothing appears';
+        bugReportText.value = 'AI model loaded! Processing... (this can take 10-30 seconds)';
       }
-    }, 2000);
+    }, 3000);
     
-    // Listen for the bug report data from content script
-    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-      if (request.type === 'bugReportData') {
-        displayBugReport(request.report);
-        sendResponse({ received: true });
+    // Set timeout to show fallback if AI takes too long
+    setTimeout(() => {
+      if (bugReportText.value.includes('Processing')) {
+        bugReportText.value = 'AI analysis taking longer than expected... generating basic report';
+        // Execute fallback script
+        chrome.scripting.executeScript({
+          target: { tabId: currentTab.id },
+          func: () => {
+            // Fallback basic report
+            const url = window.location.href;
+            const report = `## Basic Page Report\n\nURL: ${url}\nPage Title: ${document.title}\nTimestamp: ${new Date().toISOString()}\n\nNote: AI analysis timed out - this is a basic report.`;
+            chrome.runtime.sendMessage({ type: 'bugReportData', report: report });
+          }
+        });
       }
-    });
+    }, 30000);
     
   } catch (error) {
     bugReportText.value = `Error generating bug report: ${error.message}`;

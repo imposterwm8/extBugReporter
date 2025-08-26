@@ -1,6 +1,44 @@
 // Self-contained AI-enhanced bug reporter using bundled Transformers.js
 // This script includes the transformers library inline and performs smart bug analysis
 
+// Global console logs storage
+window.capturedLogs = window.capturedLogs || [];
+
+// Enhanced console log collection - set up immediately when script loads
+function setupConsoleCapture() {
+  if (window.consoleHooked) return window.capturedLogs;
+  
+  const logs = [];
+  const originalConsole = {};
+  const methods = ['log', 'warn', 'error', 'info', 'debug'];
+
+  methods.forEach(method => {
+    originalConsole[method] = console[method];
+    console[method] = (...args) => {
+      const logEntry = { 
+        method, 
+        args: args.map(arg => {
+          try {
+            return typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg);
+          } catch {
+            return '[Circular Object]';
+          }
+        }),
+        timestamp: new Date().toISOString()
+      };
+      logs.push(logEntry);
+      window.capturedLogs.push(logEntry);
+      originalConsole[method](...args);
+    };
+  });
+  
+  window.consoleHooked = true;
+  return logs;
+}
+
+// Start console capture immediately
+setupConsoleCapture();
+
 // Inline Transformers.js bundle (compressed)
 (function() {
   // Load the transformers library from our bundled version
@@ -9,6 +47,10 @@
   script.onload = function() {
     // Initialize AI functionality after transformers loads
     initializeAIBugReporter();
+  };
+  script.onerror = function() {
+    console.error('❌ Failed to load Transformers.js bundle');
+    createBasicBugReport();
   };
   document.head.appendChild(script);
 })();
@@ -19,26 +61,56 @@ let isInitializing = false;
 
 // Initialize AI functionality
 async function initializeAIBugReporter() {
+  console.log('🚀 Initializing AI bug reporter...');
+  
   try {
-    // Wait for transformers to be available
-    if (typeof transformers === 'undefined') {
-      setTimeout(initializeAIBugReporter, 100);
+    // Wait for transformers to be available - check various possible global names
+    let transformersLib = null;
+    let retries = 0;
+    const maxRetries = 50;
+    
+    while (!transformersLib && retries < maxRetries) {
+      // Try different global variable names that Transformers.js might use
+      if (typeof window.transformers !== 'undefined') {
+        transformersLib = window.transformers;
+      } else if (typeof window.Transformers !== 'undefined') {
+        transformersLib = window.Transformers;
+      } else if (typeof transformers !== 'undefined') {
+        transformersLib = transformers;
+      } else if (typeof window.tf !== 'undefined' && window.tf.pipeline) {
+        transformersLib = window.tf;
+      }
+      
+      if (!transformersLib) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        retries++;
+      }
+    }
+    
+    if (!transformersLib) {
+      console.log('⚠️ AI model not available - using fallback report');
+      createBasicBugReport();
       return;
     }
     
+    console.log('✅ Transformers library found, generating AI-enhanced report...');
+    // Store globally for use in other functions
+    window.transformersLib = transformersLib;
+    
     // Start bug report generation
     createBugReport().then(report => {
+      console.log('📋 Sending bug report to popup...');
       chrome.runtime.sendMessage({ type: 'bugReportData', report: report });
     }).catch(error => {
-      console.error('Bug report generation failed:', error);
+      console.error('❌ Bug report generation failed:', error);
       chrome.runtime.sendMessage({ 
         type: 'bugReportData', 
-        report: `Bug Report Generation Failed\n\nError: ${error.message}\n\nURL: ${window.location.href}`
+        report: `## Bug Report Generation Failed\n\n**Error:** ${error.message}\n\n**URL:** ${window.location.href}\n\n**Timestamp:** ${new Date().toISOString()}`
       });
     });
     
   } catch (error) {
-    console.error('AI initialization failed:', error);
+    console.error('❌ AI initialization failed:', error);
     // Fallback to basic report
     createBasicBugReport();
   }
@@ -51,7 +123,15 @@ async function initializeClassifier() {
   isInitializing = true;
   try {
     console.log('🤖 Loading AI model for bug analysis...');
-    classifier = await transformers.pipeline('zero-shot-classification', 'Xenova/distilbert-base-uncased-mnli');
+    
+    // Use the detected transformers library
+    const transformersLib = window.transformersLib;
+    if (!transformersLib || !transformersLib.pipeline) {
+      console.error('❌ Transformers library not available');
+      return null;
+    }
+    
+    classifier = await transformersLib.pipeline('zero-shot-classification', 'Xenova/distilbert-base-uncased-mnli');
     console.log('✅ AI model loaded successfully');
     return classifier;
   } catch (error) {
@@ -163,32 +243,10 @@ async function analyzePageContext(pageContent) {
   }
 }
 
-// Enhanced console log collection
-async function getConsoleLogs() {
-  return new Promise((resolve) => {
-    const logs = [];
-    const originalConsole = {};
-    const methods = ['log', 'warn', 'error', 'info', 'debug'];
-
-    methods.forEach(method => {
-      originalConsole[method] = console[method];
-      console[method] = (...args) => {
-        logs.push({ 
-          method, 
-          args: args.map(arg => {
-            try {
-              return typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg);
-            } catch {
-              return '[Circular Object]';
-            }
-          }),
-          timestamp: new Date().toISOString()
-        });
-        originalConsole[method](...args);
-      };
-    });
-    resolve(logs);
-  });
+// Get captured console logs
+function getConsoleLogs() {
+  // Return existing logs or start capturing
+  return window.capturedLogs || setupConsoleCapture();
 }
 
 // Enhanced DOM error detection
@@ -230,9 +288,11 @@ function getDomErrors() {
 
 // Main bug report creation with AI enhancement
 async function createBugReport() {
+  console.log('📊 Creating AI-enhanced bug report...');
+  
   const url = window.location.href;
   const pageContent = document.body.innerText.slice(0, 1000); // First 1000 chars
-  const consoleLogs = await getConsoleLogs();
+  const consoleLogs = getConsoleLogs(); // Now returns synchronously
   const domErrors = getDomErrors();
   
   // Generate AI-powered smart header
