@@ -32,39 +32,31 @@ async function createBugReport() {
   const consoleLogs = await getConsoleLogs();
   const domErrors = getDomErrors();
 
-  let report = '\n## Bug Report\n\n**URL:** ' + url + '\n\n';
+  let report = 'Bug Report\n\n';
+  report += 'URL: ' + url + '\n\n';
 
+  report += 'Console Logs:\n';
   if (consoleLogs.length > 0) {
-    report += '### Console Logs\n';
-    report += '```json\n';
     consoleLogs.forEach(log => {
       report += '[' + log.method.toUpperCase() + '] ' + log.args.join(' ') + '\n';
     });
-    report += '```\n\n';
   } else {
-    report += '### Console Logs\n';
-    report += '```\n';
     report += 'No console logs found.\n';
-    report += '```\n\n';
   }
+  report += '\n';
 
+  report += 'DOM Errors:\n';
   if (domErrors.length > 0) {
-    report += '### DOM Errors\n';
-    report += '```\n';
     domErrors.forEach(error => {
       report += error + '\n';
     });
-    report += '```\n\n';
   } else {
-    report += '### DOM Errors\n';
-    report += '```\n';
     report += 'No DOM errors found.\n';
-    report += '```\n\n';
   }
 
   return report;
 }
 
 createBugReport().then(report => {
-  chrome.runtime.sendMessage({ type: 'openReportInNewTab', report: report });
+  chrome.runtime.sendMessage({ type: 'bugReportData', report: report });
 });

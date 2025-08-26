@@ -9,7 +9,17 @@
   "permissions": [
     "activeTab",
     "scripting",
-    "clipboardWrite"
+    "clipboardWrite",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://huggingface.co/*"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["lib/transformers.min.js"],
+      "matches": ["<all_urls>"]
+    }
   ],
   "action": {
     "default_popup": "popup.html",

@@ -1,22 +1,23 @@
 @echo off
-REM Build script for extension
-echo Building extension...
+echo Building AI-Enhanced Bug Reporter Extension...
 
-REM Create build directory
-if not exist build mkdir build
+REM Install dependencies if needed
+if not exist node_modules (
+    echo Installing dependencies...
+    npm install
+)
 
-REM Copy extension files
-echo Copying files...
-copy manifest.json build\
-copy *.js build\
-copy *.html build\
-copy *.css build\
-xcopy /E /I images build\images
+REM Build the AI content script with webpack
+echo Building AI content script...
+npx webpack --mode=production
 
-REM Create zip file using PowerShell
-echo Creating zip...
-powershell -Command "Compress-Archive -Path 'build\*' -DestinationPath 'extension.zip' -Force"
+REM Copy the built file to the expected location
+if not exist dist\content.js (
+    echo Error: Build failed - dist/content.js not found
+    echo Falling back to original content script...
+    copy content.js dist\content.js
+)
 
-echo Extension built successfully as extension.zip
-echo Contents:
-powershell -Command "Get-ChildItem -Path 'build' -Recurse | Select-Object Name, Length"
+echo Build complete! Extension ready to load.
+echo Note: First AI analysis may take 30-60 seconds to download models.
+pause
