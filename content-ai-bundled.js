@@ -1,6 +1,13 @@
 // Self-contained AI-enhanced bug reporter using bundled Transformers.js
 // This script includes the transformers library inline and performs smart bug analysis
 
+// Prevent duplicate execution
+if (window.bugReporterInitialized) {
+  console.log('🔄 Bug reporter already initialized, skipping...');
+  return;
+}
+window.bugReporterInitialized = true;
+
 // Global console logs storage
 window.capturedLogs = window.capturedLogs || [];
 
@@ -39,25 +46,73 @@ function setupConsoleCapture() {
 // Start console capture immediately
 setupConsoleCapture();
 
+// Global classifier instance - use window scope to avoid redeclaration
+window.bugReporterClassifier = window.bugReporterClassifier || null;
+window.bugReporterInitializing = window.bugReporterInitializing || false;
+
 // Inline Transformers.js bundle (compressed)
 (function() {
-  // Load the transformers library from our bundled version
-  const script = document.createElement('script');
-  script.src = chrome.runtime.getURL('lib/transformers.min.js');
-  script.onload = function() {
-    // Initialize AI functionality after transformers loads
-    initializeAIBugReporter();
-  };
-  script.onerror = function() {
-    console.error('❌ Failed to load Transformers.js bundle');
-    createBasicBugReport();
-  };
-  document.head.appendChild(script);
+  console.log('🔧 Loading Transformers.js bundle...');
+  
+  // Check if already loaded
+  if (document.querySelector('script[data-transformers-bundle]')) {
+    console.log('📦 Transformers.js script already exists, checking availability...');
+    setTimeout(() => {
+      if (window.transformersLib || window.transformers || window.Transformers) {
+        initializeAIBugReporter();
+      } else {
+        console.log('⚠️ Script exists but library not available, retrying...');
+        loadTransformersBundle();
+      }
+    }, 1000);
+    return;
+  }
+  
+  loadTransformersBundle();
+  
+  function loadTransformersBundle() {
+    // Debug: Test chrome extension context
+    if (!chrome || !chrome.runtime || !chrome.runtime.getURL) {
+      console.error('❌ Chrome extension API not available');
+      createBasicBugReport();
+      return;
+    }
+    
+    const bundleUrl = chrome.runtime.getURL('lib/transformers.min.js');
+    console.log('🔗 Attempting to load bundle from:', bundleUrl);
+    
+    const script = document.createElement('script');
+    script.setAttribute('data-transformers-bundle', 'true');
+    script.src = bundleUrl;
+    
+    script.onload = function() {
+      console.log('✅ Transformers.js bundle loaded successfully');
+      // Wait a moment for the library to initialize
+      setTimeout(initializeAIBugReporter, 500);
+    };
+    
+    script.onerror = function(error) {
+      console.error('❌ Failed to load Transformers.js bundle:', error);
+      console.log('📍 Bundle URL that failed:', script.src);
+      
+      // Try to fetch the URL directly to see what the issue is
+      fetch(bundleUrl)
+        .then(response => {
+          console.log('🔍 Direct fetch response:', response.status, response.statusText);
+          if (!response.ok) {
+            console.error('❌ Bundle not accessible via fetch');
+          }
+        })
+        .catch(fetchError => {
+          console.error('❌ Direct fetch failed:', fetchError);
+        });
+        
+      createBasicBugReport();
+    };
+    
+    document.head.appendChild(script);
+  }
 })();
-
-// Global classifier instance
-let classifier = null;
-let isInitializing = false;
 
 // Initialize AI functionality
 async function initializeAIBugReporter() {
@@ -118,9 +173,9 @@ async function initializeAIBugReporter() {
 
 // Initialize the AI model
 async function initializeClassifier() {
-  if (classifier || isInitializing) return classifier;
+  if (window.bugReporterClassifier || window.bugReporterInitializing) return window.bugReporterClassifier;
   
-  isInitializing = true;
+  window.bugReporterInitializing = true;
   try {
     console.log('🤖 Loading AI model for bug analysis...');
     
@@ -131,14 +186,14 @@ async function initializeClassifier() {
       return null;
     }
     
-    classifier = await transformersLib.pipeline('zero-shot-classification', 'Xenova/distilbert-base-uncased-mnli');
+    window.bugReporterClassifier = await transformersLib.pipeline('zero-shot-classification', 'Xenova/distilbert-base-uncased-mnli');
     console.log('✅ AI model loaded successfully');
-    return classifier;
+    return window.bugReporterClassifier;
   } catch (error) {
     console.error('❌ Failed to load AI model:', error);
     return null;
   } finally {
-    isInitializing = false;
+    window.bugReporterInitializing = false;
   }
 }
 
