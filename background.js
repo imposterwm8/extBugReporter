@@ -14,14 +14,27 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               line-height: 1.5;
               margin: 2em;
             }
-            pre {
-              white-space: pre-wrap;
-              word-wrap: break-word;
+            textarea {
+              width: 100%;
+              height: 80vh;
+              background-color: #2d2d30;
+              color: #d4d4d4;
+              border: 1px solid #3c3c3c;
+              padding: 1em;
+              font-family: inherit;
+              font-size: inherit;
+              line-height: inherit;
+              resize: vertical;
+              box-sizing: border-box;
+            }
+            textarea:focus {
+              outline: 1px solid #007acc;
+              border-color: #007acc;
             }
           </style>
         </head>
         <body>
-          <pre>${reportContent}</pre>
+          <textarea>${reportContent}</textarea>
         </body>
       </html>
     `;
