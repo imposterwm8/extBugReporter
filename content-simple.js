@@ -12,35 +12,58 @@
 // Global console logs storage
 window.capturedLogs = window.capturedLogs || [];
 
-// Enhanced console log collection - set up immediately when script loads
+// Enhanced console log collection - capture existing logs and stop when extension starts
 function setupConsoleCapture() {
   if (window.consoleHooked) return window.capturedLogs;
   
   const logs = [];
   const originalConsole = {};
   const methods = ['log', 'warn', 'error', 'info', 'debug'];
+  let captureActive = true; // Stop capturing once extension starts heavy logging
 
   methods.forEach(method => {
     originalConsole[method] = console[method];
     console[method] = (...args) => {
-      const logEntry = { 
-        method, 
-        args: args.map(arg => {
-          try {
-            return typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg);
-          } catch {
-            return '[Circular Object]';
-          }
-        }),
-        timestamp: new Date().toISOString()
-      };
-      logs.push(logEntry);
-      window.capturedLogs.push(logEntry);
+      // Always call original console first
       originalConsole[method](...args);
+      
+      // Only capture if we haven't started extension processing yet
+      if (captureActive) {
+        const logText = args.join(' ').toLowerCase();
+        
+        // Stop capturing once we start our own processing
+        if (logText.includes('starting bug report') || logText.includes('initializing ai')) {
+          captureActive = false;
+          return;
+        }
+        
+        // Don't capture extension logs at all
+        const isExtensionLog = logText.includes('🧠') || logText.includes('🚀') || 
+                              logText.includes('📖') || logText.includes('✅') || 
+                              logText.includes('❌') || logText.includes('bug reporter');
+        
+        if (!isExtensionLog) {
+          const logEntry = { 
+            method, 
+            args: args.map(arg => {
+              try {
+                return typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg);
+              } catch {
+                return '[Circular Object]';
+              }
+            }),
+            timestamp: new Date().toISOString()
+          };
+          logs.push(logEntry);
+          window.capturedLogs.push(logEntry);
+        }
+      }
     };
   });
   
   window.consoleHooked = true;
+  // Stop capturing after 2 seconds to avoid infinite loops
+  setTimeout(() => { captureActive = false; }, 2000);
   return logs;
 }
 
