@@ -4,10 +4,10 @@
 class GeminiBugAnalyzer {
   constructor(apiKey) {
     this.apiKey = apiKey;
-    // Primary model - Gemini 2.5 Flash Lite (latest, fastest)
-    this.primaryModel = 'gemini-2.5-flash-lite';
+    // Primary model - Gemini 1.5 Flash (confirmed working)
+    this.primaryModel = 'gemini-1.5-flash-latest';
     // Fallback models in order of preference
-    this.fallbackModels = ['gemini-1.5-flash', 'gemini-1.5-pro'];
+    this.fallbackModels = ['gemini-1.5-flash', 'gemini-1.5-pro-latest', 'gemini-1.5-pro'];
     this.baseUrlTemplate = 'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent';
   }
 
@@ -181,6 +181,28 @@ Be specific and actionable in your recommendations. If there are no obvious issu
     }
   }
 
+  // List available models for debugging
+  async listAvailableModels() {
+    try {
+      console.log('🔍 Listing available Gemini models...');
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${this.apiKey}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      const models = data.models?.map(model => model.name.replace('models/', '')) || [];
+      
+      console.log('📋 Available models:', models);
+      return models;
+      
+    } catch (error) {
+      console.error('❌ Failed to list models:', error);
+      return [];
+    }
+  }
+
   // Test API key validity
   async testApiKey() {
     try {
@@ -190,9 +212,12 @@ Be specific and actionable in your recommendations. If there are no obvious issu
     } catch (error) {
       console.error('API key test failed:', error);
       
+      // List available models for debugging
+      await this.listAvailableModels();
+      
       // Provide specific guidance for common errors
       if (error.message.includes('404')) {
-        console.error('💡 Model not found - this usually means the API key is invalid or the model name is outdated');
+        console.error('💡 Model not found - check the available models list above');
       } else if (error.message.includes('403')) {
         console.error('💡 Access forbidden - check if your API key has the right permissions');
       } else if (error.message.includes('429')) {
