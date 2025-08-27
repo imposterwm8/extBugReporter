@@ -178,6 +178,7 @@ async function initializeClassifier() {
   window.bugReporterInitializing = true;
   try {
     console.log('🤖 Loading AI model for bug analysis...');
+    console.log('⏳ This may take 30 seconds to 2 minutes on first use to download the model...');
     
     // Use the detected transformers library
     const transformersLib = window.transformersLib;
@@ -186,11 +187,66 @@ async function initializeClassifier() {
       return null;
     }
     
-    window.bugReporterClassifier = await transformersLib.pipeline('zero-shot-classification', 'Xenova/distilbert-base-uncased-mnli');
-    console.log('✅ AI model loaded successfully');
+    // Add progress logging
+    const startTime = Date.now();
+    console.log('📥 Downloading AI model from Hugging Face...');
+    
+    // Try multiple models in order of preference (fast to comprehensive)
+    const modelOptions = [
+      'Xenova/distilbert-base-uncased-mnli',  // Main model
+      'Xenova/mobilebert-uncased-mnli',       // Smaller fallback
+      'Xenova/bart-large-mnli'                // Alternative
+    ];
+    
+    let modelLoaded = false;
+    for (const model of modelOptions) {
+      try {
+        console.log(`📦 Attempting to load model: ${model}`);
+        
+        window.bugReporterClassifier = await Promise.race([
+          transformersLib.pipeline(
+            'zero-shot-classification', 
+            model,
+            {
+              progress_callback: (progress) => {
+                if (progress.status === 'downloading') {
+                  console.log(`📥 ${model}: ${progress.name} - ${Math.round(progress.progress || 0)}%`);
+                } else if (progress.status === 'loading') {
+                  console.log(`🔄 Loading: ${progress.name}`);
+                }
+              }
+            }
+          ),
+          // Add timeout per model attempt
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Model load timeout')), 60000)
+          )
+        ]);
+        
+        console.log(`✅ Successfully loaded model: ${model}`);
+        modelLoaded = true;
+        break;
+        
+      } catch (error) {
+        console.log(`⚠️ Failed to load ${model}: ${error.message}`);
+        if (error.message === 'Model load timeout') {
+          console.log('⏰ Model download taking too long, trying next option...');
+        }
+        continue;
+      }
+    }
+    
+    if (!modelLoaded) {
+      throw new Error('All AI models failed to load');
+    }
+    
+    const loadTime = ((Date.now() - startTime) / 1000).toFixed(1);
+    console.log(`✅ AI model loaded successfully in ${loadTime} seconds`);
     return window.bugReporterClassifier;
+    
   } catch (error) {
     console.error('❌ Failed to load AI model:', error);
+    console.log('💡 Tip: Check your internet connection. Model downloads from Hugging Face.');
     return null;
   } finally {
     window.bugReporterInitializing = false;
@@ -201,7 +257,10 @@ async function initializeClassifier() {
 async function generateSmartHeader(pageContent, errors, url) {
   try {
     const clf = await initializeClassifier();
-    if (!clf) return fallbackHeader(url, errors);
+    if (!clf) {
+      console.log('🔄 AI unavailable, using enhanced pattern-based analysis...');
+      return enhancedFallbackHeader(url, errors, pageContent);
+    }
 
     // Combine page content and errors for analysis
     const analysisText = `
@@ -234,44 +293,78 @@ async function generateSmartHeader(pageContent, errors, url) {
 
   } catch (error) {
     console.error('AI analysis failed:', error);
-    return fallbackHeader(url, errors);
+    return enhancedFallbackHeader(url, errors, pageContent);
   }
 }
 
-// Fallback header generation (pattern-based)
+// Enhanced fallback header generation (pattern-based)
+function enhancedFallbackHeader(url, errors, pageContent) {
+  const lowerUrl = url.toLowerCase();
+  const lowerTitle = document.title.toLowerCase();
+  const lowerContent = pageContent.toLowerCase();
+  
+  // HTTP error patterns (enhanced)
+  if (lowerUrl.includes('error') || lowerTitle.includes('error') || 
+      lowerContent.includes('404') || lowerContent.includes('500') ||
+      lowerContent.includes('not found') || lowerContent.includes('server error')) {
+    return '## HTTP Error Page (Pattern Analysis)';
+  }
+  
+  // Authentication patterns
+  if (lowerContent.includes('login') || lowerContent.includes('sign in') ||
+      lowerContent.includes('unauthorized') || lowerContent.includes('access denied')) {
+    return '## Authentication Issue (Pattern Analysis)';
+  }
+  
+  // Console error patterns (enhanced)
+  if (errors.some(error => error.toLowerCase().includes('typeerror'))) {
+    return '## JavaScript TypeError (Pattern Analysis)';
+  }
+  
+  if (errors.some(error => error.toLowerCase().includes('referenceerror'))) {
+    return '## JavaScript Reference Error (Pattern Analysis)';
+  }
+  
+  if (errors.some(error => error.toLowerCase().includes('network'))) {
+    return '## Network Connection Issue (Pattern Analysis)';
+  }
+  
+  // Form/validation patterns
+  if (lowerContent.includes('required field') || lowerContent.includes('validation') ||
+      errors.some(error => error.toLowerCase().includes('validation'))) {
+    return '## Form Validation Issue (Pattern Analysis)';
+  }
+
+  // Service-specific patterns
+  if (lowerUrl.includes('microsoft.com') || lowerUrl.includes('office.com')) {
+    return '## Microsoft Service Issue (Pattern Analysis)';
+  }
+  
+  if (lowerUrl.includes('github.com')) {
+    return '## GitHub Platform Issue (Pattern Analysis)';
+  }
+  
+  if (lowerUrl.includes('google.com')) {
+    return '## Google Service Issue (Pattern Analysis)';
+  }
+
+  // Generic fallback with confidence
+  return '## Page Issue Report (Pattern Analysis)';
+}
+
+// Simple fallback header generation
 function fallbackHeader(url, errors) {
-  // HTTP error patterns
-  if (url.includes('error') || document.title.toLowerCase().includes('error')) {
-    return '## HTTP Error Page';
-  }
-  
-  // Console error patterns
-  if (errors.some(error => error.includes('TypeError'))) {
-    return '## JavaScript TypeError Detected';
-  }
-  
-  if (errors.some(error => error.includes('ReferenceError'))) {
-    return '## JavaScript ReferenceError';
-  }
-
-  // URL-based detection
-  if (url.includes('microsoft.com') || url.includes('office.com')) {
-    return '## Microsoft Service Issue';
-  }
-  
-  if (url.includes('github.com')) {
-    return '## GitHub Platform Issue';
-  }
-
-  // Generic fallback
-  return '## Page Issue Report';
+  return enhancedFallbackHeader(url, errors, document.body.innerText.slice(0, 500));
 }
 
 // Enhanced context analysis
 async function analyzePageContext(pageContent) {
   try {
     const clf = await initializeClassifier();
-    if (!clf) return { severity: 'unknown', context: 'Unable to analyze' };
+    if (!clf) {
+      console.log('🔄 Using pattern-based context analysis...');
+      return analyzeContextWithPatterns(pageContent);
+    }
 
     // Analyze severity
     const severityResult = await clf(pageContent, ['critical error', 'warning', 'minor issue', 'informational']);
@@ -290,12 +383,67 @@ async function analyzePageContext(pageContent) {
       severity: severityResult.labels[0],
       severityConfidence: (severityResult.scores[0] * 100).toFixed(0),
       context: contextResult.labels[0],
-      contextConfidence: (contextResult.scores[0] * 100).toFixed(0)
+      contextConfidence: (contextResult.scores[0] * 100).toFixed(0),
+      analysisType: 'AI-powered'
     };
 
   } catch (error) {
-    return { severity: 'unknown', context: 'Analysis failed' };
+    console.log('🔄 AI context analysis failed, using patterns...');
+    return analyzeContextWithPatterns(pageContent);
   }
+}
+
+// Pattern-based context analysis fallback
+function analyzeContextWithPatterns(pageContent) {
+  const lowerContent = pageContent.toLowerCase();
+  
+  // Determine severity
+  let severity = 'informational';
+  let severityConfidence = 60;
+  
+  if (lowerContent.includes('error') || lowerContent.includes('failed') || 
+      lowerContent.includes('404') || lowerContent.includes('500')) {
+    severity = 'critical error';
+    severityConfidence = 85;
+  } else if (lowerContent.includes('warning') || lowerContent.includes('caution')) {
+    severity = 'warning';
+    severityConfidence = 75;
+  } else if (lowerContent.includes('issue') || lowerContent.includes('problem')) {
+    severity = 'minor issue';
+    severityConfidence = 70;
+  }
+  
+  // Determine context
+  let context = 'general page issue';
+  let contextConfidence = 60;
+  
+  if (lowerContent.includes('login') || lowerContent.includes('unauthorized') || 
+      lowerContent.includes('access denied')) {
+    context = 'user authentication failed';
+    contextConfidence = 80;
+  } else if (lowerContent.includes('network') || lowerContent.includes('connection') ||
+             lowerContent.includes('timeout')) {
+    context = 'network connectivity problem';
+    contextConfidence = 80;
+  } else if (lowerContent.includes('server error') || lowerContent.includes('500') ||
+             lowerContent.includes('internal error')) {
+    context = 'server internal error';
+    contextConfidence = 85;
+  } else if (lowerContent.includes('validation') || lowerContent.includes('required field')) {
+    context = 'form data validation issue';
+    contextConfidence = 75;
+  } else if (lowerContent.includes('loading') || lowerContent.includes('not found')) {
+    context = 'page content loading problem';
+    contextConfidence = 75;
+  }
+  
+  return {
+    severity,
+    severityConfidence: severityConfidence.toString(),
+    context,
+    contextConfidence: contextConfidence.toString(),
+    analysisType: 'pattern-based'
+  };
 }
 
 // Get captured console logs
@@ -359,10 +507,12 @@ async function createBugReport() {
   // Build enhanced report
   let report = `${smartHeader}\n\n`;
   
-  // Add AI analysis section
-  report += 'AI Analysis\n';
+  // Add analysis section
+  const analysisTitle = context.analysisType === 'AI-powered' ? 'AI Analysis' : 'Pattern Analysis';
+  report += `${analysisTitle}\n`;
   report += `Issue Severity: ${context.severity} (${context.severityConfidence}% confidence)\n`;
-  report += `Issue Context: ${context.context} (${context.contextConfidence}% confidence)\n\n`;
+  report += `Issue Context: ${context.context} (${context.contextConfidence}% confidence)\n`;
+  report += `Analysis Type: ${context.analysisType}\n\n`;
   
   // Add URL
   report += `URL: ${url}\n`;

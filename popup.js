@@ -66,17 +66,24 @@ async function generateBugReport() {
     // Set timeout to show fallback if AI takes too long
     setTimeout(() => {
       if (bugReportText.value.includes('Processing')) {
-        bugReportText.value = 'AI analysis taking longer than expected... generating basic report';
-        // Execute fallback script
-        chrome.scripting.executeScript({
-          target: { tabId: currentTab.id },
-          func: () => {
-            // Fallback basic report
-            const url = window.location.href;
-            const report = `## Basic Page Report\n\nURL: ${url}\nPage Title: ${document.title}\nTimestamp: ${new Date().toISOString()}\n\nNote: AI analysis timed out - this is a basic report.`;
-            chrome.runtime.sendMessage({ type: 'bugReportData', report: report });
+        bugReportText.value = 'AI model download taking longer than expected... (can take 2-3 minutes on first use)';
+        
+        // Extend timeout for first-time model download
+        setTimeout(() => {
+          if (bugReportText.value.includes('download taking longer')) {
+            bugReportText.value = 'AI analysis taking too long... generating basic report';
+            // Execute fallback script
+            chrome.scripting.executeScript({
+              target: { tabId: currentTab.id },
+              func: () => {
+                // Fallback basic report
+                const url = window.location.href;
+                const report = `## Basic Page Report\n\nURL: ${url}\nPage Title: ${document.title}\nTimestamp: ${new Date().toISOString()}\n\nNote: AI analysis timed out after 2 minutes - this is a basic report.\nTip: First AI analysis can take 2-3 minutes to download models. Try again for faster results.`;
+                chrome.runtime.sendMessage({ type: 'bugReportData', report: report });
+              }
+            });
           }
-        });
+        }, 90000); // Additional 90 seconds (total 2 minutes)
       }
     }, 30000);
     
