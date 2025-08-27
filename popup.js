@@ -108,6 +108,11 @@ async function generateBugReport(analysisType = 'general') {
         target: { tabId: currentTab.id },
         files: ['react-advanced.js']
       });
+
+      await chrome.scripting.executeScript({
+        target: { tabId: currentTab.id },
+        files: ['performance-monitor.js']
+      });
       
       await chrome.scripting.executeScript({
         target: { tabId: currentTab.id },

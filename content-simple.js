@@ -83,12 +83,25 @@ async function createGeminiEnhancedReport(apiKey) {
     
     const analyzer = new window.GeminiBugAnalyzer(apiKey);
     
+    let performanceData = null;
+    if (window.PerformanceMonitor) {
+      const monitor = new window.PerformanceMonitor();
+      await monitor.startMonitoring();
+      
+      // Give it time to collect performance data
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      performanceData = monitor.generatePerformanceReport();
+      monitor.stopMonitoring();
+    }
+
     const pageData = {
       url: window.location.href,
       title: document.title,
       content: document.body.innerText.slice(0, 2000),
       consoleErrors: getConsoleLogs(),
       domErrors: getDomErrors(),
+      performanceData: performanceData,
       timestamp: new Date().toISOString()
     };
     

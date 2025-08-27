@@ -40,6 +40,7 @@ WEBPAGE DATA:
 - Content Preview: ${pageData.content.slice(0, 500)}
 - Console Errors: ${JSON.stringify(pageData.consoleErrors, null, 2)}
 - DOM Issues: ${JSON.stringify(pageData.domErrors, null, 2)}
+- Performance Data: ${pageData.performanceData ? JSON.stringify(pageData.performanceData, null, 2) : 'Not available'}
 - Timestamp: ${pageData.timestamp}
 
 Please provide a comprehensive bug analysis as a SINGLE JSON object in this EXACT format (DO NOT return an array or multiple objects):
@@ -62,10 +63,14 @@ IMPORTANT: Return ONLY a single JSON object, not an array. Focus on the most imp
 
 Focus on:
 1. JavaScript errors and their implications
-2. UX/UI problems visible in content
-3. Authentication and authorization issues
-4. Performance and loading problems
-5. Form validation and user flow issues
+2. Performance issues: Core Web Vitals (LCP, FID, CLS), long tasks, slow resources
+3. Network problems: failed requests, slow API calls, render-blocking resources
+4. Memory issues: leaks, high usage, inefficient patterns
+5. UX/UI problems visible in content  
+6. Authentication and authorization issues
+7. Form validation and user flow issues
+
+Pay special attention to performance metrics if available - analyze loading times, render-blocking resources, memory usage, and Core Web Vitals scores.
 
 Be specific and actionable in your recommendations. If there are no obvious issues, focus on potential improvements or minor concerns.`;
   }
