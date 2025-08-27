@@ -30,38 +30,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-document.addEventListener('DOMContentLoaded', function() {
-  const tabBtns = document.querySelectorAll('.tab-btn');
-  const tabPanels = document.querySelectorAll('.tab-panel');
-
-  tabBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const targetTab = btn.dataset.tab;
-      
-      tabBtns.forEach(b => b.classList.remove('active'));
-      tabPanels.forEach(p => p.classList.remove('active'));
-      
-      btn.classList.add('active');
-      document.getElementById(`${targetTab}-panel`).classList.add('active');
-    });
-  });
-
-  document.getElementById('perfAnalysis')?.addEventListener('click', () => {
-    generateBugReport('performance');
-  });
-
-  document.getElementById('reactAnalysis')?.addEventListener('click', () => {
-    generateBugReport('react');
-  });
-
-  document.getElementById('securityScan')?.addEventListener('click', () => {
-    generateBugReport('security');
-  });
-
-  document.getElementById('accessibilityCheck')?.addEventListener('click', () => {
-    generateBugReport('accessibility');
-  });
-});
 
 async function generateBugReport(analysisType = 'general') {
   const reportContainer = document.getElementById('reportContainer');
@@ -203,20 +171,11 @@ document.getElementById('refreshReport').addEventListener('click', () => {
   });
 });
 
-document.getElementById('backToTabs').addEventListener('click', () => {
-  const reportContainer = document.getElementById('reportContainer');
-  const tabContainer = document.querySelector('.tab-container');
-  
-  reportContainer.classList.add('hidden');
-  document.body.classList.remove('expanded');
-  tabContainer.style.display = 'block';
-});
-
 document.getElementById('closeReport').addEventListener('click', () => {
   const reportContainer = document.getElementById('reportContainer');
-  const tabContainer = document.querySelector('.tab-container');
+  const startButton = document.getElementById('reportBug');
   
   reportContainer.classList.add('hidden');
   document.body.classList.remove('expanded');
-  tabContainer.style.display = 'block';
+  startButton.style.display = 'flex';
 });
