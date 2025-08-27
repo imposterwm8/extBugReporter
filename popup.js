@@ -198,11 +198,20 @@ document.getElementById('refreshReport').addEventListener('click', () => {
   });
 });
 
-document.getElementById('closeReport').addEventListener('click', () => {
+document.getElementById('backToTabs').addEventListener('click', () => {
   const reportContainer = document.getElementById('reportContainer');
-  const startButton = document.getElementById('reportBug');
+  const tabContainer = document.querySelector('.tab-container');
   
   reportContainer.classList.add('hidden');
   document.body.classList.remove('expanded');
-  startButton.style.display = 'flex';
+  tabContainer.style.display = 'block';
+});
+
+document.getElementById('closeReport').addEventListener('click', () => {
+  const reportContainer = document.getElementById('reportContainer');
+  const tabContainer = document.querySelector('.tab-container');
+  
+  reportContainer.classList.add('hidden');
+  document.body.classList.remove('expanded');
+  tabContainer.style.display = 'block';
 });
