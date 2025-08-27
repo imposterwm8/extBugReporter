@@ -5,10 +5,13 @@ body {
   margin: 0;
   padding: 20px;
   background: 
+    url('images/flappy.png'),
     radial-gradient(circle at 30% 30%, rgba(120, 119, 198, 0.1) 0%, transparent 50%),
     radial-gradient(circle at 70% 70%, rgba(255, 119, 198, 0.08) 0%, transparent 50%),
     linear-gradient(135deg, #1a1a2e 0%, #16213e 25%, #1a1a2e 50%, #0f3460 75%, #1a1a2e 100%);
-  background-size: 700px 700px, 500px 500px, 100% 100%;
+  background-size: contain, 700px 700px, 500px 500px, 100% 100%;
+  background-position: center, 0% 0%, 100% 100%, 0% 0%;
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat;
   animation: glowShift 8s ease-in-out infinite alternate;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   text-align: center;
@@ -17,6 +20,19 @@ body {
   transition: all 0.3s ease;
   backdrop-filter: blur(20px);
   overflow: hidden;
+}
+
+body::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('images/flappy.png') center/contain no-repeat;
+  opacity: 0.3;
+  z-index: -1;
+  pointer-events: none;
 }
 
 body.expanded {
@@ -39,6 +55,39 @@ body.expanded {
   text-align: center;
   position: relative;
   z-index: 10;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+}
+
+.qa-text {
+  font-size: 48px;
+  font-weight: bold;
+  color: gold;
+  text-shadow: 
+    0 0 10px rgba(255, 215, 0, 0.8),
+    0 0 20px rgba(255, 215, 0, 0.6),
+    2px 2px 4px rgba(0, 0, 0, 0.5);
+  font-family: 'Arial Black', Arial, sans-serif;
+  letter-spacing: 2px;
+  z-index: 15;
+}
+
+.aiauditor-text {
+  font-size: 24px;
+  font-weight: bold;
+  color: #ffffff;
+  text-shadow: 
+    0 0 10px rgba(255, 255, 255, 0.8),
+    0 0 20px rgba(255, 255, 255, 0.4),
+    2px 2px 4px rgba(0, 0, 0, 0.5);
+  font-family: 'Arial Black', Arial, sans-serif;
+  letter-spacing: 1px;
+  z-index: 15;
 }
 
 .logo {

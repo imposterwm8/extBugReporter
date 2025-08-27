@@ -1,11 +1,11 @@
 {
   "manifest_version": 3,
-  "name": "Bug Reporter",
+  "name": "IssuetrakQAI",
   "version": "1.9",
   "background": {
     "service_worker": "background.js"
   },
-  "description": "Reports bugs by copying browser info to the clipboard.",
+  "description": "AI-powered QA analysis for React applications with intelligent bug reporting and performance insights.",
   "permissions": [
     "activeTab",
     "scripting",

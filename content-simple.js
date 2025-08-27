@@ -1,7 +1,3 @@
-// Smart Bug Reporter - Gemini AI vs Pattern Analysis Only
-// Removes all Transformers.js dependencies for cleaner, faster operation
-
-// Prevent duplicate execution
 (function() {
   if (window.bugReporterInitialized) {
     console.log('🔄 Bug reporter already initialized, skipping...');
@@ -9,35 +5,28 @@
   }
   window.bugReporterInitialized = true;
 
-// Global console logs storage
 window.capturedLogs = window.capturedLogs || [];
-
-// Enhanced console log collection - capture existing logs and stop when extension starts
 function setupConsoleCapture() {
   if (window.consoleHooked) return window.capturedLogs;
   
   const logs = [];
   const originalConsole = {};
   const methods = ['log', 'warn', 'error', 'info', 'debug'];
-  let captureActive = true; // Stop capturing once extension starts heavy logging
+  let captureActive = true;
 
   methods.forEach(method => {
     originalConsole[method] = console[method];
     console[method] = (...args) => {
-      // Always call original console first
       originalConsole[method](...args);
       
-      // Only capture if we haven't started extension processing yet
       if (captureActive) {
         const logText = args.join(' ').toLowerCase();
         
-        // Stop capturing once we start our own processing
         if (logText.includes('starting bug report') || logText.includes('initializing ai')) {
           captureActive = false;
           return;
         }
         
-        // Don't capture extension logs at all
         const isExtensionLog = logText.includes('🧠') || logText.includes('🚀') || 
                               logText.includes('📖') || logText.includes('✅') || 
                               logText.includes('❌') || logText.includes('bug reporter');
@@ -62,27 +51,19 @@ function setupConsoleCapture() {
   });
   
   window.consoleHooked = true;
-  // Stop capturing after 2 seconds to avoid infinite loops
   setTimeout(() => { captureActive = false; }, 2000);
   return logs;
 }
 
-// Start console capture immediately
 setupConsoleCapture();
-
-// Initialize immediately - no delays needed (silent operation)
 initializeAIBugReporter();
-
-// Initialize AI functionality - Gemini or Pattern only (silent operation)
 async function initializeAIBugReporter() {
   try {
-    // Check user's AI preference from settings
     const settings = await chrome.storage.sync.get({
       aiMode: 'gemini',
       geminiApiKey: ''
     });
     
-    // Only use Gemini if explicitly configured with API key
     if (settings.aiMode === 'gemini' && settings.geminiApiKey && settings.geminiApiKey.trim()) {
       await createGeminiEnhancedReport(settings.geminiApiKey.trim());
     } else {
@@ -90,22 +71,18 @@ async function initializeAIBugReporter() {
     }
     
   } catch (error) {
-    // Silent fallback to pattern analysis
     createPatternBugReport();
   }
 }
 
-// Create report using Gemini AI (silent operation)
 async function createGeminiEnhancedReport(apiKey) {
   try {
-    // Check if Gemini analyzer is available
     if (!window.GeminiBugAnalyzer) {
       throw new Error('Gemini analyzer not available - script injection failed');
     }
     
     const analyzer = new window.GeminiBugAnalyzer(apiKey);
     
-    // Gather page data
     const pageData = {
       url: window.location.href,
       title: document.title,
@@ -115,10 +92,21 @@ async function createGeminiEnhancedReport(apiKey) {
       timestamp: new Date().toISOString()
     };
     
-    // Get Gemini analysis
+    let reactAnalysis = null;
+    let advancedReactAnalysis = null;
+    
+    if (window.ReactQAAnalyzer) {
+      const reactAnalyzer = new window.ReactQAAnalyzer();
+      reactAnalysis = await reactAnalyzer.analyzeReactApp();
+      
+      if (reactAnalysis && reactAnalysis.reactInfo.detected && window.ReactAdvancedAnalyzer) {
+        const advancedAnalyzer = new window.ReactAdvancedAnalyzer();
+        advancedReactAnalysis = await advancedAnalyzer.analyzeAdvancedReact();
+      }
+    }
+    
     const analysis = await analyzer.analyzeBugReport(pageData);
     
-    // Build comprehensive report
     let report = `${analysis.header}\n\n`;
     
     report += `### Gemini AI Analysis\n`;
@@ -143,54 +131,98 @@ async function createGeminiEnhancedReport(apiKey) {
       report += `**Technical Details:** ${analysis.technicalDetails}\n\n`;
     }
     
-    // Add standard sections
+    if (reactAnalysis && reactAnalysis.reactInfo.detected) {
+      report += `### ⚛️ React Analysis\n`;
+      report += `**React Version:** ${reactAnalysis.reactInfo.version}\n`;
+      report += `**Mode:** ${reactAnalysis.reactInfo.mode}\n`;
+      report += `**DevTools:** ${reactAnalysis.reactInfo.devTools ? 'Available' : 'Not Found'}\n`;
+      report += `**Components:** ${reactAnalysis.components.totalComponents} (${reactAnalysis.components.functionalComponents} functional, ${reactAnalysis.components.classComponents} class)\n`;
+      report += `**Performance Score:** ${reactAnalysis.performance.renderPerformance.totalRenderTime.toFixed(1)}ms total render time\n`;
+      report += `**Accessibility Score:** ${reactAnalysis.accessibility.score}%\n\n`;
+      
+      if (reactAnalysis.recommendations.length > 0) {
+        report += `**React Recommendations:**\n`;
+        reactAnalysis.recommendations.slice(0, 3).forEach(rec => {
+          const priority = rec.priority === 'high' ? '🔴' : rec.priority === 'medium' ? '🟡' : '🟢';
+          report += `${priority} ${rec.title}: ${rec.description}\n`;
+        });
+        report += '\n';
+      }
+      
+      if (advancedReactAnalysis) {
+        report += `### 🔬 Advanced React Analysis\n`;
+        report += `**Memory Leak Risk:** ${advancedReactAnalysis.advancedPerformance.memoryLeaks.riskLevel}\n`;
+        report += `**Hook Issues:** ${advancedReactAnalysis.advancedPerformance.hookDependencies.potentialIssues}\n`;
+        
+        if (advancedReactAnalysis.stateManagement.redux.detected) {
+          report += `**Redux:** Detected\n`;
+        }
+        if (advancedReactAnalysis.stateManagement.context.providers > 0) {
+          report += `**Context Providers:** ${advancedReactAnalysis.stateManagement.context.providers}\n`;
+        }
+        
+        report += `**Error Boundaries:** ${advancedReactAnalysis.errorHandling.errorBoundaries}\n`;
+        
+        const testingFrameworks = Object.keys(advancedReactAnalysis.testing.frameworks).filter(key => advancedReactAnalysis.testing.frameworks[key]);
+        if (testingFrameworks.length > 0) {
+          report += `**Testing:** ${testingFrameworks.join(', ')}\n`;
+        }
+        
+        const advancedRecs = [
+          ...advancedReactAnalysis.advancedPerformance.recommendations,
+          ...advancedReactAnalysis.stateManagement.recommendations,
+          ...advancedReactAnalysis.errorHandling.recommendations
+        ];
+        
+        if (advancedRecs.length > 0) {
+          report += `\n**Advanced Recommendations:**\n`;
+          advancedRecs.slice(0, 2).forEach(rec => {
+            const priority = rec.priority === 'critical' ? '🔴' : rec.priority === 'high' ? '🟠' : rec.priority === 'medium' ? '🟡' : '🟢';
+            report += `${priority} ${rec.title}: ${rec.description}\n`;
+          });
+        }
+        report += '\n';
+      }
+    }
+    
     report += `**URL:** ${pageData.url}\n`;
     report += `**Page Title:** ${pageData.title}\n`;
     report += `**Timestamp:** ${pageData.timestamp}\n`;
     report += `**Analysis Type:** ${analysis.analysisType}\n\n`;
     
-    // Console logs section
-    report += addConsoleLogsSection(pageData.consoleErrors);
+        report += addConsoleLogsSection(pageData.consoleErrors);
     report += addDomErrorsSection(pageData.domErrors);
     
     chrome.runtime.sendMessage({ type: 'bugReportData', report: report });
     
   } catch (error) {
-    // Silent fallback to pattern analysis
     createPatternBugReport();
   }
 }
 
-// Create enhanced pattern-based report (silent operation)
 function createPatternBugReport() {
   const url = window.location.href;
   const pageContent = document.body.innerText.slice(0, 1000);
   const consoleLogs = getConsoleLogs();
   const domErrors = getDomErrors();
   
-  // Generate smart header using patterns
   const smartHeader = enhancedFallbackHeader(url, domErrors, pageContent);
   
-  // Analyze context using patterns
   const context = analyzeContextWithPatterns(pageContent);
   
-  // Build enhanced report
   let report = `${smartHeader}\n\n`;
   
-  // Add analysis section
   const analysisTitle = 'Pattern Analysis';
   report += `### ${analysisTitle}\n`;
   report += `**Issue Severity:** ${context.severity} (${context.severityConfidence}% confidence)\n`;
   report += `**Issue Context:** ${context.context} (${context.contextConfidence}% confidence)\n`;
   report += `**Analysis Type:** ${context.analysisType}\n\n`;
   
-  // Add URL
   report += `**URL:** ${url}\n`;
   report += `**Page Title:** ${document.title}\n`;
   report += `**Timestamp:** ${new Date().toISOString()}\n\n`;
 
-  // Console logs section
-  report += addConsoleLogsSection(consoleLogs);
+    report += addConsoleLogsSection(consoleLogs);
   report += addDomErrorsSection(domErrors);
   
   chrome.runtime.sendMessage({ type: 'bugReportData', report: report });

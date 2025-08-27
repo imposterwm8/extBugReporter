@@ -1,12 +1,5 @@
-// Bug Reporter Extension Options Page
-
-// Load saved settings when page opens
 document.addEventListener('DOMContentLoaded', loadSettings);
-
-// Save settings when button clicked
 document.getElementById('saveBtn').addEventListener('click', saveSettings);
-
-// Show/hide API key input based on selection
 document.querySelectorAll('input[name="aiMode"]').forEach(radio => {
   radio.addEventListener('change', toggleConfigSections);
 });

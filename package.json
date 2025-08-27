@@ -1,8 +1,0 @@
-{
-  "name": "bug-reporter-extension",
-  "version": "1.0.0",
-  "description": "AI-powered bug reporting extension with bundled Transformers.js",
-  "scripts": {
-    "build": "echo Extension ready - no build required with bundled approach"
-  }
-}
