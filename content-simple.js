@@ -70,63 +70,42 @@ function setupConsoleCapture() {
 // Start console capture immediately
 setupConsoleCapture();
 
-// Initialize immediately - no delays needed
-console.log('🔧 Starting bug report generation...');
+// Initialize immediately - no delays needed (silent operation)
 initializeAIBugReporter();
 
-// Initialize AI functionality - Gemini or Pattern only
+// Initialize AI functionality - Gemini or Pattern only (silent operation)
 async function initializeAIBugReporter() {
-  console.log('🚀 Initializing AI bug reporter...');
-  
   try {
-    // Check user's AI preference from settings with detailed debugging
-    console.log('📖 Reading Chrome storage...');
+    // Check user's AI preference from settings
     const settings = await chrome.storage.sync.get({
       aiMode: 'gemini',
       geminiApiKey: ''
     });
     
-    console.log(`🎯 Settings loaded:`, { 
-      aiMode: settings.aiMode, 
-      hasApiKey: !!settings.geminiApiKey,
-      apiKeyLength: settings.geminiApiKey ? settings.geminiApiKey.length : 0
-    });
-    
     // Only use Gemini if explicitly configured with API key
     if (settings.aiMode === 'gemini' && settings.geminiApiKey && settings.geminiApiKey.trim()) {
-      console.log('🧠 Attempting Gemini AI analysis...');
       await createGeminiEnhancedReport(settings.geminiApiKey.trim());
     } else {
-      console.log('📊 Using pattern analysis', {
-        reason: !settings.geminiApiKey ? 'No API key' : 
-                settings.aiMode !== 'gemini' ? 'Mode not Gemini' : 'Unknown'
-      });
       createPatternBugReport();
     }
     
   } catch (error) {
-    console.error('❌ AI initialization failed:', error);
-    console.log('🔄 Falling back to pattern analysis');
+    // Silent fallback to pattern analysis
     createPatternBugReport();
   }
 }
 
-// Create report using Gemini AI
+// Create report using Gemini AI (silent operation)
 async function createGeminiEnhancedReport(apiKey) {
   try {
-    console.log('🧠 Initializing Gemini AI analysis...');
-    
     // Check if Gemini analyzer is available
     if (!window.GeminiBugAnalyzer) {
-      console.error('❌ Gemini analyzer script not loaded');
       throw new Error('Gemini analyzer not available - script injection failed');
     }
     
-    console.log('✅ Gemini analyzer found, creating instance...');
     const analyzer = new window.GeminiBugAnalyzer(apiKey);
     
     // Gather page data
-    console.log('📊 Gathering page data...');
     const pageData = {
       url: window.location.href,
       title: document.title,
@@ -136,10 +115,8 @@ async function createGeminiEnhancedReport(apiKey) {
       timestamp: new Date().toISOString()
     };
     
-    console.log('📤 Sending request to Gemini API...');
     // Get Gemini analysis
     const analysis = await analyzer.analyzeBugReport(pageData);
-    console.log('✅ Gemini analysis completed:', analysis);
     
     // Build comprehensive report
     let report = `${analysis.header}\n\n`;
@@ -176,20 +153,16 @@ async function createGeminiEnhancedReport(apiKey) {
     report += addConsoleLogsSection(pageData.consoleErrors);
     report += addDomErrorsSection(pageData.domErrors);
     
-    console.log('📋 Sending Gemini report to popup...');
     chrome.runtime.sendMessage({ type: 'bugReportData', report: report });
     
   } catch (error) {
-    console.error('❌ Gemini analysis failed:', error.message || error);
-    console.log('🔄 Falling back to pattern analysis');
+    // Silent fallback to pattern analysis
     createPatternBugReport();
   }
 }
 
-// Create enhanced pattern-based report (no AI models needed)
+// Create enhanced pattern-based report (silent operation)
 function createPatternBugReport() {
-  console.log('📊 Generating pattern-based bug report...');
-  
   const url = window.location.href;
   const pageContent = document.body.innerText.slice(0, 1000);
   const consoleLogs = getConsoleLogs();
@@ -220,7 +193,6 @@ function createPatternBugReport() {
   report += addConsoleLogsSection(consoleLogs);
   report += addDomErrorsSection(domErrors);
   
-  console.log('📋 Sending pattern report to popup...');
   chrome.runtime.sendMessage({ type: 'bugReportData', report: report });
 }
 

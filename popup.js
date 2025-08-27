@@ -57,7 +57,7 @@ async function generateBugReport() {
       geminiApiKey: ''
     });
     
-    console.log(`🎯 Using AI mode: ${settings.aiMode}`);
+    // Silent operation - no console logging
     
     // Inject appropriate scripts based on AI mode
     try {
@@ -67,7 +67,7 @@ async function generateBugReport() {
           target: { tabId: currentTab.id },
           files: ['gemini-ai.js']
         });
-        console.log('✅ Gemini AI script injected');
+        // Silent injection
       }
       
       // Always inject the simplified content script
@@ -75,10 +75,10 @@ async function generateBugReport() {
         target: { tabId: currentTab.id },
         files: ['content-simple.js']
       });
-      console.log('✅ Simplified content script injected');
+      // Silent injection completed
       
     } catch (injectionError) {
-      console.warn('⚠️ Script injection failed:', injectionError);
+      // Silent error handling
       
       // Fallback: just inject content script (will use pattern analysis)
       await chrome.scripting.executeScript({

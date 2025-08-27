@@ -11,31 +11,24 @@ class GeminiBugAnalyzer {
     this.baseUrlTemplate = 'https://generativelanguage.googleapis.com/v1beta/{model}:generateContent';
   }
 
-  // Main analysis function with model fallbacks
+  // Main analysis function with model fallbacks (silent operation)
   async analyzeBugReport(pageData) {
-    console.log('🧠 Starting Gemini AI analysis...');
-    
     const prompt = this.buildAnalysisPrompt(pageData);
     const modelsToTry = [this.primaryModel, ...this.fallbackModels];
     
     for (const model of modelsToTry) {
       try {
-        console.log(`📡 Trying model: ${model}`);
         const response = await this.callGeminiAPI(prompt, model);
         
         if (!response || !response.text) {
           throw new Error('Empty response from Gemini API');
         }
         
-        console.log(`✅ Gemini analysis completed with ${model}`);
         return this.parseGeminiResponse(response.text);
         
-      } catch (error) {
-        console.warn(`⚠️ Model ${model} failed:`, error.message);
-        
+      } catch (error) {        
         // If this was the last model, throw the error
         if (model === modelsToTry[modelsToTry.length - 1]) {
-          console.error('❌ All Gemini models failed');
           throw error;
         }
         
@@ -147,9 +140,7 @@ Be specific and actionable in your recommendations. If there are no obvious issu
       return analysis;
       
     } catch (parseError) {
-      console.warn('Failed to parse structured response, creating fallback:', parseError);
-      
-      // Fallback: create structured response from text
+      // Fallback: create structured response from text (silent)
       return {
         header: "## AI Analysis Results (85% confidence)",
         severity: this.extractSeverity(responseText),
@@ -181,10 +172,9 @@ Be specific and actionable in your recommendations. If there are no obvious issu
     }
   }
 
-  // List available models for debugging
+  // List available models for debugging (silent operation)
   async listAvailableModels() {
     try {
-      console.log('🔍 Listing available Gemini models...');
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${this.apiKey}`);
       
       if (!response.ok) {
@@ -194,36 +184,20 @@ Be specific and actionable in your recommendations. If there are no obvious issu
       const data = await response.json();
       const models = data.models?.map(model => model.name.replace('models/', '')) || [];
       
-      console.log('📋 Available models:', models);
       return models;
       
     } catch (error) {
-      console.error('❌ Failed to list models:', error);
       return [];
     }
   }
 
-  // Test API key validity
+  // Test API key validity (silent operation)
   async testApiKey() {
     try {
       const testPrompt = "Say 'API key is working' if you can read this.";
       const response = await this.callGeminiAPI(testPrompt, this.primaryModel);
       return response.text.toLowerCase().includes('api key is working');
     } catch (error) {
-      console.error('API key test failed:', error);
-      
-      // List available models for debugging
-      await this.listAvailableModels();
-      
-      // Provide specific guidance for common errors
-      if (error.message.includes('404')) {
-        console.error('💡 Model not found - check the available models list above');
-      } else if (error.message.includes('403')) {
-        console.error('💡 Access forbidden - check if your API key has the right permissions');
-      } else if (error.message.includes('429')) {
-        console.error('💡 Rate limit exceeded - too many requests');
-      }
-      
       return false;
     }
   }
