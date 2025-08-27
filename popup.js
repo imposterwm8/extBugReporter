@@ -62,28 +62,20 @@ async function generateBugReport() {
     // Inject appropriate scripts based on AI mode
     try {
       if (settings.aiMode === 'gemini' && settings.geminiApiKey) {
-        // Inject Gemini AI script
+        // Inject Gemini AI script first
         await chrome.scripting.executeScript({
           target: { tabId: currentTab.id },
           files: ['gemini-ai.js']
         });
         console.log('✅ Gemini AI script injected');
-        
-      } else if (settings.aiMode === 'local') {
-        // Inject transformers.js for local AI
-        await chrome.scripting.executeScript({
-          target: { tabId: currentTab.id },
-          files: ['lib/transformers.min.js']
-        });
-        console.log('✅ Transformers.js injected for local AI');
       }
       
-      // Always inject the main content script
+      // Always inject the simplified content script
       await chrome.scripting.executeScript({
         target: { tabId: currentTab.id },
-        files: ['content-ai-bundled.js']
+        files: ['content-simple.js']
       });
-      console.log('✅ Content script injected');
+      console.log('✅ Simplified content script injected');
       
     } catch (injectionError) {
       console.warn('⚠️ Script injection failed:', injectionError);
@@ -91,7 +83,7 @@ async function generateBugReport() {
       // Fallback: just inject content script (will use pattern analysis)
       await chrome.scripting.executeScript({
         target: { tabId: currentTab.id },
-        files: ['content-ai-bundled.js']
+        files: ['content-simple.js']
       });
     }
     
