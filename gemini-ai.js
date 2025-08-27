@@ -4,27 +4,44 @@
 class GeminiBugAnalyzer {
   constructor(apiKey) {
     this.apiKey = apiKey;
-    this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+    // Primary model - Gemini 1.5 Flash (fast and efficient)
+    this.primaryModel = 'gemini-1.5-flash';
+    // Fallback models in order of preference
+    this.fallbackModels = ['gemini-1.5-pro', 'gemini-pro'];
+    this.baseUrlTemplate = 'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent';
   }
 
-  // Main analysis function
+  // Main analysis function with model fallbacks
   async analyzeBugReport(pageData) {
-    try {
-      console.log('🧠 Starting Gemini AI analysis...');
-      
-      const prompt = this.buildAnalysisPrompt(pageData);
-      const response = await this.callGeminiAPI(prompt);
-      
-      if (!response || !response.text) {
-        throw new Error('Empty response from Gemini API');
+    console.log('🧠 Starting Gemini AI analysis...');
+    
+    const prompt = this.buildAnalysisPrompt(pageData);
+    const modelsToTry = [this.primaryModel, ...this.fallbackModels];
+    
+    for (const model of modelsToTry) {
+      try {
+        console.log(`📡 Trying model: ${model}`);
+        const response = await this.callGeminiAPI(prompt, model);
+        
+        if (!response || !response.text) {
+          throw new Error('Empty response from Gemini API');
+        }
+        
+        console.log(`✅ Gemini analysis completed with ${model}`);
+        return this.parseGeminiResponse(response.text);
+        
+      } catch (error) {
+        console.warn(`⚠️ Model ${model} failed:`, error.message);
+        
+        // If this was the last model, throw the error
+        if (model === modelsToTry[modelsToTry.length - 1]) {
+          console.error('❌ All Gemini models failed');
+          throw error;
+        }
+        
+        // Otherwise, continue to next model
+        continue;
       }
-      
-      console.log('✅ Gemini analysis completed');
-      return this.parseGeminiResponse(response.text);
-      
-    } catch (error) {
-      console.error('❌ Gemini analysis failed:', error);
-      throw error;
     }
   }
 
@@ -67,7 +84,7 @@ Be specific and actionable in your recommendations. If there are no obvious issu
   }
 
   // Call Gemini API
-  async callGeminiAPI(prompt) {
+  async callGeminiAPI(prompt, model = this.primaryModel) {
     const requestBody = {
       contents: [{
         parts: [{
@@ -82,7 +99,8 @@ Be specific and actionable in your recommendations. If there are no obvious issu
       }
     };
 
-    const response = await fetch(`${this.baseUrl}?key=${this.apiKey}`, {
+    const apiUrl = this.baseUrlTemplate.replace('{model}', model);
+    const response = await fetch(`${apiUrl}?key=${this.apiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -167,10 +185,20 @@ Be specific and actionable in your recommendations. If there are no obvious issu
   async testApiKey() {
     try {
       const testPrompt = "Say 'API key is working' if you can read this.";
-      const response = await this.callGeminiAPI(testPrompt);
+      const response = await this.callGeminiAPI(testPrompt, this.primaryModel);
       return response.text.toLowerCase().includes('api key is working');
     } catch (error) {
       console.error('API key test failed:', error);
+      
+      // Provide specific guidance for common errors
+      if (error.message.includes('404')) {
+        console.error('💡 Model not found - this usually means the API key is invalid or the model name is outdated');
+      } else if (error.message.includes('403')) {
+        console.error('💡 Access forbidden - check if your API key has the right permissions');
+      } else if (error.message.includes('429')) {
+        console.error('💡 Rate limit exceeded - too many requests');
+      }
+      
       return false;
     }
   }
