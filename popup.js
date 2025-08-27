@@ -15,7 +15,7 @@ chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
   
   if (isValidWebPage) {
     button.disabled = false;
-    button.addEventListener('click', generateBugReport);
+    button.addEventListener('click', () => generateBugReport());
   } else {
     button.disabled = true;
     button.textContent = 'Not Available';
@@ -45,12 +45,12 @@ async function generateBugReport(analysisType = 'general') {
       accessibility: 'Checking accessibility compliance...'
     };
     
-    bugReportText.value = analysisMessages[analysisType] || analysisMessages.general;
+    bugReportText.textContent = analysisMessages[analysisType] || analysisMessages.general;
     reportContainer.classList.remove('hidden');
     document.body.classList.add('expanded');
     startButton.style.display = 'none';
     
-    bugReportText.value = `Loading AI model for ${analysisType} analysis... This may take a moment.`;
+    bugReportText.textContent = `Loading AI model for ${analysisType} analysis... This may take a moment.`;
     
     const settings = await chrome.storage.sync.get({
       aiMode: 'gemini',
@@ -84,6 +84,11 @@ async function generateBugReport(analysisType = 'general') {
       
       await chrome.scripting.executeScript({
         target: { tabId: currentTab.id },
+        files: ['asp-analyzer.js']
+      });
+      
+      await chrome.scripting.executeScript({
+        target: { tabId: currentTab.id },
         files: ['content-simple.js']
       });
       
@@ -96,18 +101,18 @@ async function generateBugReport(analysisType = 'general') {
     }
     
     setTimeout(() => {
-      if (bugReportText.value.includes('Loading AI model')) {
-        bugReportText.value = 'AI model loaded! Processing... (this can take 10-30 seconds)';
+      if (bugReportText.textContent.includes('Loading AI model')) {
+        bugReportText.textContent = 'AI model loaded! Processing... (this can take 10-30 seconds)';
       }
     }, 3000);
     
     setTimeout(() => {
-      if (bugReportText.value.includes('Processing')) {
-        bugReportText.value = 'AI model download taking longer than expected... (can take 2-3 minutes on first use)';
+      if (bugReportText.textContent.includes('Processing')) {
+        bugReportText.textContent = 'AI model download taking longer than expected... (can take 2-3 minutes on first use)';
         
         setTimeout(() => {
-          if (bugReportText.value.includes('download taking longer')) {
-            bugReportText.value = 'AI analysis taking too long... generating basic report';
+          if (bugReportText.textContent.includes('download taking longer')) {
+            bugReportText.textContent = 'AI analysis taking too long... generating basic report';
             chrome.scripting.executeScript({
               target: { tabId: currentTab.id },
               func: () => {
@@ -122,33 +127,49 @@ async function generateBugReport(analysisType = 'general') {
     }, 30000);
     
   } catch (error) {
-    bugReportText.value = `Error generating bug report: ${error.message}`;
+    bugReportText.textContent = `Error generating bug report: ${error.message}`;
   }
 }
 
 function displayBugReport(report) {
   const bugReportText = document.getElementById('bugReportText');
   bugReportData = report;
-  bugReportText.value = report;
+  bugReportText.innerHTML = parseMarkdown(report);
+}
+
+function parseMarkdown(text) {
+  return text
+    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+    .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/gim, '<em>$1</em>')
+    .replace(/`(.*?)`/gim, '<code>$1</code>')
+    .replace(/^\* (.*$)/gim, '<li>$1</li>')
+    .replace(/^- (.*$)/gim, '<li>$1</li>')
+    .replace(/\n\n/gim, '</p><p>')
+    .replace(/^(?!<[hul])/gim, '<p>')
+    .replace(/([^>])\n/gim, '$1<br>')
+    .replace(/<p><\/p>/gim, '')
+    .replace(/(<li>.*<\/li>)/gims, '<ul>$1</ul>')
+    .replace(/<\/ul>\s*<ul>/gim, '');
 }
 
 document.getElementById('copyReport').addEventListener('click', async () => {
   const bugReportText = document.getElementById('bugReportText');
-  const notification = document.getElementById('notification');
+  const reportContainer = document.getElementById('reportContainer');
   
   try {
-    await navigator.clipboard.writeText(bugReportText.value);
-    notification.textContent = 'Copied to clipboard!';
-    notification.classList.remove('hidden');
+    await navigator.clipboard.writeText(bugReportData);
+    reportContainer.classList.add('copy-success');
     setTimeout(() => {
-      notification.classList.add('hidden');
-    }, 2000);
+      reportContainer.classList.remove('copy-success');
+    }, 1000);
   } catch (error) {
-    notification.textContent = 'Failed to copy';
-    notification.classList.remove('hidden');
+    reportContainer.classList.add('copy-error');
     setTimeout(() => {
-      notification.classList.add('hidden');
-    }, 2000);
+      reportContainer.classList.remove('copy-error');
+    }, 1000);
   }
 });
 

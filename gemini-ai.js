@@ -41,6 +41,7 @@ WEBPAGE DATA:
 - Console Errors: ${JSON.stringify(pageData.consoleErrors, null, 2)}
 - DOM Issues: ${JSON.stringify(pageData.domErrors, null, 2)}
 - Performance Data: ${pageData.performanceData ? JSON.stringify(pageData.performanceData, null, 2) : 'Not available'}
+- ASP.NET Analysis: ${pageData.aspNetAnalysis ? JSON.stringify(pageData.aspNetAnalysis, null, 2) : 'Not ASP.NET application'}
 - Timestamp: ${pageData.timestamp}
 
 Please provide a comprehensive bug analysis as a SINGLE JSON object in this EXACT format (DO NOT return an array or multiple objects):
@@ -69,8 +70,16 @@ Focus on:
 5. UX/UI problems visible in content  
 6. Authentication and authorization issues
 7. Form validation and user flow issues
+8. ASP.NET specific issues: ViewState problems, server errors, postback issues, session management
 
 Pay special attention to performance metrics if available - analyze loading times, render-blocking resources, memory usage, and Core Web Vitals scores.
+
+If ASP.NET Analysis data is provided, focus on:
+- ViewState size and optimization issues
+- Server-side error patterns in the rendered content
+- Authentication and session management problems
+- Postback and Web Forms validation issues
+- Resource optimization for ASP.NET applications
 
 Be specific and actionable in your recommendations. If there are no obvious issues, focus on potential improvements or minor concerns.`;
   }

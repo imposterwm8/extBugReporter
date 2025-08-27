@@ -95,6 +95,12 @@ async function createGeminiEnhancedReport(apiKey) {
       monitor.stopMonitoring();
     }
 
+    let aspNetAnalysis = null;
+    if (window.ASPNETAnalyzer) {
+      const aspAnalyzer = new window.ASPNETAnalyzer();
+      aspNetAnalysis = await aspAnalyzer.analyzeASPNET();
+    }
+
     const pageData = {
       url: window.location.href,
       title: document.title,
@@ -102,6 +108,7 @@ async function createGeminiEnhancedReport(apiKey) {
       consoleErrors: getConsoleLogs(),
       domErrors: getDomErrors(),
       performanceData: performanceData,
+      aspNetAnalysis: aspNetAnalysis,
       timestamp: new Date().toISOString()
     };
     
@@ -194,6 +201,32 @@ async function createGeminiEnhancedReport(apiKey) {
             report += `${priority} ${rec.title}: ${rec.description}\n`;
           });
         }
+        report += '\n';
+      }
+    }
+
+    if (aspNetAnalysis && aspNetAnalysis.detected) {
+      report += `### 🖥️ ASP.NET Analysis\n`;
+      report += `**Platform:** ${aspNetAnalysis.version}\n`;
+      
+      if (aspNetAnalysis.summary) {
+        report += `**Status:** ${aspNetAnalysis.summary}\n`;
+      }
+      
+      if (aspNetAnalysis.issues && aspNetAnalysis.issues.length > 0) {
+        report += `**Issues Found:** ${aspNetAnalysis.issues.length}\n`;
+        aspNetAnalysis.issues.slice(0, 3).forEach(issue => {
+          const severity = issue.type.includes('Critical') ? '🔴' : issue.type.includes('Large') ? '🟡' : '🟢';
+          report += `${severity} ${issue.type}: ${issue.issue}\n`;
+        });
+        report += '\n';
+      }
+      
+      if (aspNetAnalysis.recommendations && aspNetAnalysis.recommendations.length > 0) {
+        report += `**ASP.NET Recommendations:**\n`;
+        aspNetAnalysis.recommendations.slice(0, 2).forEach(rec => {
+          report += `• ${rec}\n`;
+        });
         report += '\n';
       }
     }
