@@ -30,18 +30,59 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-async function generateBugReport() {
+document.addEventListener('DOMContentLoaded', function() {
+  const tabBtns = document.querySelectorAll('.tab-btn');
+  const tabPanels = document.querySelectorAll('.tab-panel');
+
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetTab = btn.dataset.tab;
+      
+      tabBtns.forEach(b => b.classList.remove('active'));
+      tabPanels.forEach(p => p.classList.remove('active'));
+      
+      btn.classList.add('active');
+      document.getElementById(`${targetTab}-panel`).classList.add('active');
+    });
+  });
+
+  document.getElementById('perfAnalysis')?.addEventListener('click', () => {
+    generateBugReport('performance');
+  });
+
+  document.getElementById('reactAnalysis')?.addEventListener('click', () => {
+    generateBugReport('react');
+  });
+
+  document.getElementById('securityScan')?.addEventListener('click', () => {
+    generateBugReport('security');
+  });
+
+  document.getElementById('accessibilityCheck')?.addEventListener('click', () => {
+    generateBugReport('accessibility');
+  });
+});
+
+async function generateBugReport(analysisType = 'general') {
   const reportContainer = document.getElementById('reportContainer');
   const bugReportText = document.getElementById('bugReportText');
   const startButton = document.getElementById('reportBug');
   
   try {
-    bugReportText.value = 'Analyzing page for bug report...';
+    const analysisMessages = {
+      general: 'Analyzing page for bug report...',
+      performance: 'Running performance audit...',
+      react: 'Analyzing React components and hooks...',
+      security: 'Scanning for security vulnerabilities...',
+      accessibility: 'Checking accessibility compliance...'
+    };
+    
+    bugReportText.value = analysisMessages[analysisType] || analysisMessages.general;
     reportContainer.classList.remove('hidden');
     document.body.classList.add('expanded');
     startButton.style.display = 'none';
     
-    bugReportText.value = 'Loading AI model for smart analysis... This may take a moment.';
+    bugReportText.value = `Loading AI model for ${analysisType} analysis... This may take a moment.`;
     
     const settings = await chrome.storage.sync.get({
       aiMode: 'gemini',

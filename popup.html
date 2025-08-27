@@ -14,12 +14,46 @@
       <div class="aiauditor-text">IAuditor</div>
     </div>
   </div>
-  
-  <button id="reportBug">
-    <span class="bug-icon"></span>
-    Start
-    <span class="bug-icon"></span>
-  </button>
+
+  <div class="tab-container">
+    <div class="tab-nav">
+      <button class="tab-btn active" data-tab="analysis">Analysis</button>
+      <button class="tab-btn" data-tab="performance">Performance</button>
+      <button class="tab-btn" data-tab="security">Security</button>
+    </div>
+
+    <div class="tab-content">
+      <div class="tab-panel active" id="analysis-panel">
+        <button id="reportBug">
+          <span class="bug-icon"></span>
+          Start Analysis
+          <span class="bug-icon"></span>
+        </button>
+      </div>
+
+      <div class="tab-panel" id="performance-panel">
+        <button id="perfAnalysis" class="secondary-btn">
+          <span class="perf-icon">⚡</span>
+          Performance Audit
+        </button>
+        <button id="reactAnalysis" class="secondary-btn">
+          <span class="react-icon">⚛️</span>
+          React Deep Dive
+        </button>
+      </div>
+
+      <div class="tab-panel" id="security-panel">
+        <button id="securityScan" class="secondary-btn">
+          <span class="security-icon">🔒</span>
+          Security Scan
+        </button>
+        <button id="accessibilityCheck" class="secondary-btn">
+          <span class="a11y-icon">♿</span>
+          Accessibility Check
+        </button>
+      </div>
+    </div>
+  </div>
   
   <div id="reportContainer" class="hidden">
     <div class="report-header">
