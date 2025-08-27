@@ -51,27 +51,45 @@ async function generateBugReport() {
     // Execute AI-enhanced content script to collect data
     bugReportText.value = 'Loading AI model for smart analysis... This may take a moment.';
     
-    // First inject the transformers bundle, then the content script
+    // Get user settings to determine what to inject
+    const settings = await chrome.storage.sync.get({
+      aiMode: 'gemini',
+      geminiApiKey: ''
+    });
+    
+    console.log(`🎯 Using AI mode: ${settings.aiMode}`);
+    
+    // Inject appropriate scripts based on AI mode
     try {
-      // Inject transformers.js first
+      if (settings.aiMode === 'gemini' && settings.geminiApiKey) {
+        // Inject Gemini AI script
+        await chrome.scripting.executeScript({
+          target: { tabId: currentTab.id },
+          files: ['gemini-ai.js']
+        });
+        console.log('✅ Gemini AI script injected');
+        
+      } else if (settings.aiMode === 'local') {
+        // Inject transformers.js for local AI
+        await chrome.scripting.executeScript({
+          target: { tabId: currentTab.id },
+          files: ['lib/transformers.min.js']
+        });
+        console.log('✅ Transformers.js injected for local AI');
+      }
+      
+      // Always inject the main content script
       await chrome.scripting.executeScript({
         target: { tabId: currentTab.id },
-        files: ['lib/transformers.min.js']
+        files: ['content-ai-bundled.js']
       });
+      console.log('✅ Content script injected');
       
-      console.log('✅ Transformers.js injected directly');
+    } catch (injectionError) {
+      console.warn('⚠️ Script injection failed:', injectionError);
       
-      // Then inject our content script
-      const results = await chrome.scripting.executeScript({
-        target: { tabId: currentTab.id },
-        files: ['content-ai-bundled.js']  // Use self-contained bundled version with transformers.js
-      });
-      
-    } catch (transformerError) {
-      console.warn('⚠️ Could not inject transformers directly, falling back to original method:', transformerError);
-      
-      // Fallback to original method
-      const results = await chrome.scripting.executeScript({
+      // Fallback: just inject content script (will use pattern analysis)
+      await chrome.scripting.executeScript({
         target: { tabId: currentTab.id },
         files: ['content-ai-bundled.js']
       });

@@ -85,56 +85,141 @@ async function initializeAIBugReporter() {
   console.log('🚀 Initializing AI bug reporter...');
   
   try {
-    // Wait for transformers to be available - check various possible global names
-    let transformersLib = null;
-    let retries = 0;
-    const maxRetries = 50;
-    
-    while (!transformersLib && retries < maxRetries) {
-      // Try different global variable names that Transformers.js might use
-      if (typeof window.transformers !== 'undefined') {
-        transformersLib = window.transformers;
-      } else if (typeof window.Transformers !== 'undefined') {
-        transformersLib = window.Transformers;
-      } else if (typeof transformers !== 'undefined') {
-        transformersLib = transformers;
-      } else if (typeof window.tf !== 'undefined' && window.tf.pipeline) {
-        transformersLib = window.tf;
-      }
-      
-      if (!transformersLib) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        retries++;
-      }
-    }
-    
-    if (!transformersLib) {
-      console.log('⚠️ AI model not available - using fallback report');
-      createBasicBugReport();
-      return;
-    }
-    
-    console.log('✅ Transformers library found, generating AI-enhanced report...');
-    // Store globally for use in other functions
-    window.transformersLib = transformersLib;
-    
-    // Start bug report generation
-    createBugReport().then(report => {
-      console.log('📋 Sending bug report to popup...');
-      chrome.runtime.sendMessage({ type: 'bugReportData', report: report });
-    }).catch(error => {
-      console.error('❌ Bug report generation failed:', error);
-      chrome.runtime.sendMessage({ 
-        type: 'bugReportData', 
-        report: `## Bug Report Generation Failed\n\n**Error:** ${error.message}\n\n**URL:** ${window.location.href}\n\n**Timestamp:** ${new Date().toISOString()}`
-      });
+    // Check user's AI preference from settings
+    const settings = await chrome.storage.sync.get({
+      aiMode: 'gemini',
+      geminiApiKey: ''
     });
+    
+    console.log(`🎯 AI Mode: ${settings.aiMode}`);
+    
+    // Route to appropriate AI method
+    if (settings.aiMode === 'gemini' && settings.geminiApiKey) {
+      await createGeminiEnhancedReport(settings.geminiApiKey);
+    } else if (settings.aiMode === 'local') {
+      await createTransformersReport();
+    } else {
+      console.log('📊 Using pattern analysis');
+      createBasicBugReport();
+    }
     
   } catch (error) {
     console.error('❌ AI initialization failed:', error);
     // Fallback to basic report
     createBasicBugReport();
   }
+}
+
+// Create report using Gemini AI
+async function createGeminiEnhancedReport(apiKey) {
+  try {
+    console.log('🧠 Initializing Gemini AI analysis...');
+    
+    if (!window.GeminiBugAnalyzer) {
+      throw new Error('Gemini analyzer not available');
+    }
+    
+    const analyzer = new window.GeminiBugAnalyzer(apiKey);
+    
+    // Gather page data
+    const pageData = {
+      url: window.location.href,
+      title: document.title,
+      content: document.body.innerText.slice(0, 2000),
+      consoleErrors: getConsoleLogs(),
+      domErrors: getDomErrors(),
+      timestamp: new Date().toISOString()
+    };
+    
+    // Get Gemini analysis
+    const analysis = await analyzer.analyzeBugReport(pageData);
+    
+    // Build comprehensive report
+    let report = `${analysis.header}\n\n`;
+    
+    report += `### Gemini AI Analysis\n`;
+    report += `**Summary:** ${analysis.summary}\n\n`;
+    report += `**Severity:** ${analysis.severity} (${analysis.severityConfidence}% confidence)\n`;
+    report += `**Category:** ${analysis.category} (${analysis.categoryConfidence}% confidence)\n`;
+    report += `**Priority:** ${analysis.priority}\n\n`;
+    
+    if (analysis.rootCause) {
+      report += `**Root Cause:** ${analysis.rootCause}\n\n`;
+    }
+    
+    if (analysis.userImpact) {
+      report += `**User Impact:** ${analysis.userImpact}\n\n`;
+    }
+    
+    if (analysis.suggestedFix) {
+      report += `**Suggested Fix:** ${analysis.suggestedFix}\n\n`;
+    }
+    
+    if (analysis.technicalDetails) {
+      report += `**Technical Details:** ${analysis.technicalDetails}\n\n`;
+    }
+    
+    // Add standard sections
+    report += `**URL:** ${pageData.url}\n`;
+    report += `**Page Title:** ${pageData.title}\n`;
+    report += `**Timestamp:** ${pageData.timestamp}\n`;
+    report += `**Analysis Type:** ${analysis.analysisType}\n\n`;
+    
+    // Console logs section
+    report += addConsoleLogsSection(pageData.consoleErrors);
+    report += addDomErrorsSection(pageData.domErrors);
+    
+    chrome.runtime.sendMessage({ type: 'bugReportData', report: report });
+    
+  } catch (error) {
+    console.error('❌ Gemini analysis failed:', error);
+    console.log('🔄 Falling back to pattern analysis');
+    createBasicBugReport();
+  }
+}
+
+// Create report using Transformers.js
+async function createTransformersReport() {
+  // Wait for transformers to be available - check various possible global names
+  let transformersLib = null;
+  let retries = 0;
+  const maxRetries = 50;
+  
+  while (!transformersLib && retries < maxRetries) {
+    // Try different global variable names that Transformers.js might use
+    if (typeof window.transformers !== 'undefined') {
+      transformersLib = window.transformers;
+    } else if (typeof window.Transformers !== 'undefined') {
+      transformersLib = window.Transformers;
+    } else if (typeof transformers !== 'undefined') {
+      transformersLib = transformers;
+    } else if (typeof window.tf !== 'undefined' && window.tf.pipeline) {
+      transformersLib = window.tf;
+    }
+    
+    if (!transformersLib) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      retries++;
+    }
+  }
+  
+  if (!transformersLib) {
+    console.log('⚠️ Transformers.js not available - using pattern analysis');
+    createBasicBugReport();
+    return;
+  }
+  
+  console.log('✅ Transformers library found, generating local AI report...');
+  window.transformersLib = transformersLib;
+  
+  // Start bug report generation
+  createBugReport().then(report => {
+    console.log('📋 Sending bug report to popup...');
+    chrome.runtime.sendMessage({ type: 'bugReportData', report: report });
+  }).catch(error => {
+    console.error('❌ Bug report generation failed:', error);
+    createBasicBugReport();
+  });
 }
 
 // Initialize the AI model
@@ -529,6 +614,34 @@ function createBasicBugReport() {
   }
   
   chrome.runtime.sendMessage({ type: 'bugReportData', report: report });
+}
+
+// Helper function to add console logs section
+function addConsoleLogsSection(consoleLogs) {
+  let section = '### Console Activity\n';
+  if (consoleLogs.length > 0) {
+    consoleLogs.forEach(log => {
+      section += `[${log.method.toUpperCase()}] ${log.args.join(' ')}\n`;
+    });
+  } else {
+    section += 'No console activity detected.\n';
+  }
+  section += '\n';
+  return section;
+}
+
+// Helper function to add DOM errors section
+function addDomErrorsSection(domErrors) {
+  let section = '### Page Issues\n';
+  if (domErrors.length > 0) {
+    domErrors.forEach(error => {
+      section += `- ${error}\n`;
+    });
+  } else {
+    section += 'No obvious page issues found.\n';
+  }
+  section += '\n';
+  return section;
 }
 
 })(); // Close the IIFE that prevents duplicate execution
