@@ -4,10 +4,10 @@
 class GeminiBugAnalyzer {
   constructor(apiKey) {
     this.apiKey = apiKey;
-    // Primary model - Gemini 1.5 Flash (confirmed working)
-    this.primaryModel = 'gemini-1.5-flash-latest';
+    // Primary model - Gemini 2.5 Flash Lite as requested
+    this.primaryModel = 'gemini-2.5-flash-lite';
     // Fallback models in order of preference
-    this.fallbackModels = ['gemini-1.5-flash', 'gemini-1.5-pro-latest', 'gemini-1.5-pro'];
+    this.fallbackModels = ['gemini-1.5-flash-latest', 'gemini-1.5-flash', 'gemini-1.5-pro'];
     this.baseUrlTemplate = 'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent';
   }
 
