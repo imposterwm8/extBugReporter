@@ -2,11 +2,12 @@
 // This script includes the transformers library inline and performs smart bug analysis
 
 // Prevent duplicate execution
-if (window.bugReporterInitialized) {
-  console.log('🔄 Bug reporter already initialized, skipping...');
-  return;
-}
-window.bugReporterInitialized = true;
+(function() {
+  if (window.bugReporterInitialized) {
+    console.log('🔄 Bug reporter already initialized, skipping...');
+    return;
+  }
+  window.bugReporterInitialized = true;
 
 // Global console logs storage
 window.capturedLogs = window.capturedLogs || [];
@@ -564,3 +565,5 @@ function createBasicBugReport() {
   
   chrome.runtime.sendMessage({ type: 'bugReportData', report: report });
 }
+
+})(); // Close the IIFE that prevents duplicate execution
