@@ -2,6 +2,14 @@
 
 Chrome extension for enhanced bug reporting with AI analysis.
 
+## Features
+
+- Rapid bug detection and analysis
+- React application QA tools
+- AI-powered issue reporting
+- Performance insights
+- Code quality assessment
+
 ## Installation
 
 1. Download or clone this repository
