@@ -51,69 +51,34 @@ setupConsoleCapture();
 window.bugReporterClassifier = window.bugReporterClassifier || null;
 window.bugReporterInitializing = window.bugReporterInitializing || false;
 
-// Inline Transformers.js bundle (compressed)
-(function() {
-  console.log('🔧 Loading Transformers.js bundle...');
+// Check for Transformers.js availability and initialize
+console.log('🔧 Checking for Transformers.js availability...');
+
+// Wait a moment for injected transformers to be available, then initialize
+setTimeout(() => {
+  // Check if transformers is available in various global forms
+  let transformersLib = null;
   
-  // Check if already loaded
-  if (document.querySelector('script[data-transformers-bundle]')) {
-    console.log('📦 Transformers.js script already exists, checking availability...');
-    setTimeout(() => {
-      if (window.transformersLib || window.transformers || window.Transformers) {
-        initializeAIBugReporter();
-      } else {
-        console.log('⚠️ Script exists but library not available, retrying...');
-        loadTransformersBundle();
-      }
-    }, 1000);
-    return;
+  if (typeof window.transformers !== 'undefined') {
+    transformersLib = window.transformers;
+    console.log('📦 Found window.transformers');
+  } else if (typeof window.Transformers !== 'undefined') {
+    transformersLib = window.Transformers; 
+    console.log('📦 Found window.Transformers');
+  } else if (typeof transformers !== 'undefined') {
+    transformersLib = transformers;
+    console.log('📦 Found global transformers');
   }
   
-  loadTransformersBundle();
-  
-  function loadTransformersBundle() {
-    // Debug: Test chrome extension context
-    if (!chrome || !chrome.runtime || !chrome.runtime.getURL) {
-      console.error('❌ Chrome extension API not available');
-      createBasicBugReport();
-      return;
-    }
-    
-    const bundleUrl = chrome.runtime.getURL('lib/transformers.min.js');
-    console.log('🔗 Attempting to load bundle from:', bundleUrl);
-    
-    const script = document.createElement('script');
-    script.setAttribute('data-transformers-bundle', 'true');
-    script.src = bundleUrl;
-    
-    script.onload = function() {
-      console.log('✅ Transformers.js bundle loaded successfully');
-      // Wait a moment for the library to initialize
-      setTimeout(initializeAIBugReporter, 500);
-    };
-    
-    script.onerror = function(error) {
-      console.error('❌ Failed to load Transformers.js bundle:', error);
-      console.log('📍 Bundle URL that failed:', script.src);
-      
-      // Try to fetch the URL directly to see what the issue is
-      fetch(bundleUrl)
-        .then(response => {
-          console.log('🔍 Direct fetch response:', response.status, response.statusText);
-          if (!response.ok) {
-            console.error('❌ Bundle not accessible via fetch');
-          }
-        })
-        .catch(fetchError => {
-          console.error('❌ Direct fetch failed:', fetchError);
-        });
-        
-      createBasicBugReport();
-    };
-    
-    document.head.appendChild(script);
+  if (transformersLib) {
+    console.log('✅ Transformers.js available, proceeding with AI analysis');
+    window.transformersLib = transformersLib;
+    initializeAIBugReporter();
+  } else {
+    console.log('⚠️ Transformers.js not available, using pattern analysis');
+    initializeAIBugReporter(); // Will use fallback methods
   }
-})();
+}, 1000); // Give time for injection
 
 // Initialize AI functionality
 async function initializeAIBugReporter() {

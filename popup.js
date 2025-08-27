@@ -51,10 +51,31 @@ async function generateBugReport() {
     // Execute AI-enhanced content script to collect data
     bugReportText.value = 'Loading AI model for smart analysis... This may take a moment.';
     
-    const results = await chrome.scripting.executeScript({
-      target: { tabId: currentTab.id },
-      files: ['content-ai-bundled.js']  // Use self-contained bundled version with transformers.js
-    });
+    // First inject the transformers bundle, then the content script
+    try {
+      // Inject transformers.js first
+      await chrome.scripting.executeScript({
+        target: { tabId: currentTab.id },
+        files: ['lib/transformers.min.js']
+      });
+      
+      console.log('✅ Transformers.js injected directly');
+      
+      // Then inject our content script
+      const results = await chrome.scripting.executeScript({
+        target: { tabId: currentTab.id },
+        files: ['content-ai-bundled.js']  // Use self-contained bundled version with transformers.js
+      });
+      
+    } catch (transformerError) {
+      console.warn('⚠️ Could not inject transformers directly, falling back to original method:', transformerError);
+      
+      // Fallback to original method
+      const results = await chrome.scripting.executeScript({
+        target: { tabId: currentTab.id },
+        files: ['content-ai-bundled.js']
+      });
+    }
     
     // Update loading message after script execution
     setTimeout(() => {
@@ -122,7 +143,26 @@ document.getElementById('copyReport').addEventListener('click', async () => {
 
 // Refresh report
 document.getElementById('refreshReport').addEventListener('click', () => {
-  generateBugReport();
+  console.log('🔄 Refresh button clicked');
+  
+  // Clear any existing bug reporter state on the page
+  chrome.scripting.executeScript({
+    target: { tabId: currentTab.id },
+    func: () => {
+      // Clear the existing state to allow fresh execution
+      window.bugReporterInitialized = false;
+      window.bugReporterClassifier = null;
+      window.bugReporterInitializing = false;
+      console.log('🧹 Cleared bug reporter state for refresh');
+    }
+  }).then(() => {
+    // Generate new report
+    generateBugReport();
+  }).catch(error => {
+    console.error('Error clearing state:', error);
+    // Try generating anyway
+    generateBugReport();
+  });
 });
 
 // Close report view
