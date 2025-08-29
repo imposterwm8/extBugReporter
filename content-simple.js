@@ -406,12 +406,23 @@ function getDomErrors() {
     });
   });
 
-  // Look for HTTP status codes in page content
-  const bodyText = document.body.innerText;
-  const httpErrorPattern = /\b(4\d{2}|5\d{2})\b/g;
-  const httpErrors = bodyText.match(httpErrorPattern);
-  if (httpErrors) {
-    errors.push(`HTTP Status Codes found: ${httpErrors.join(', ')}`);
+  // Look for HTTP status mentions in page content (reduce false positives)
+  // Only capture 4xx/5xx codes when they appear near context words like
+  // "http", "status", "error", "server", or "code". Avoid bare numbers like "555".
+  try {
+    const bodyText = document.body.innerText;
+    const contextRegex = /(?:http|status|code|error|server)[^0-9]{0,10}\b(4\d{2}|5\d{2})\b|\b(4\d{2}|5\d{2})\b[^0-9]{0,10}(?:http|status|code|error|server)/gi;
+    const found = new Set();
+    let m;
+    while ((m = contextRegex.exec(bodyText)) !== null) {
+      const code = (m[1] || m[2] || '').trim();
+      if (code) found.add(code);
+    }
+    if (found.size > 0) {
+      errors.push(`HTTP status mentions found: ${Array.from(found).join(', ')}`);
+    }
+  } catch (_) {
+    // Ignore extraction errors
   }
 
   // Check for JavaScript errors in page
